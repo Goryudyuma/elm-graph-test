@@ -15,7 +15,6 @@ serviceWorker.unregister();
 hpccWasm.wasmFolder('https://unpkg.com/@hpcc-js/wasm/dist/');
 
 app.ports.dot.subscribe((data) => {
-  console.log(data);
   hpccWasm.graphviz.layout(data, 'svg', 'dot').then((svg) => {
     app.ports.updateSVG.send(svg);
   });
