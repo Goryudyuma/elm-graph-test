@@ -1,9 +1,12 @@
 port module Main exposing (..)
 
 import Browser
-import Html exposing (Html, div, h1, img, text)
-import Html.Attributes exposing (src)
+import Html exposing (Html, div, h1, iframe, img, text)
+import Html.Attributes exposing (sandbox, src, srcdoc, style)
 import Html.Events exposing (onClick)
+import Markdown exposing (defaultOptions)
+import Svg
+import Svg.Attributes
 
 
 
@@ -13,17 +16,25 @@ import Html.Events exposing (onClick)
 port dot : String -> Cmd msg
 
 
+port updateSVG : (String -> msg) -> Sub msg
+
+
 
 ---- MODEL ----
 
 
 type alias Model =
-    {}
+    { svg : String }
+
+
+initialModel : Model
+initialModel =
+    { svg = "" }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    ( initialModel, Cmd.none )
 
 
 
@@ -32,6 +43,7 @@ init =
 
 type Msg
     = UpdateDot String
+    | UpdateSVG String
     | NoOp
 
 
@@ -40,6 +52,9 @@ update msg model =
     case msg of
         UpdateDot s ->
             ( model, dot s )
+
+        UpdateSVG svg ->
+            ( { model | svg = svg }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -51,10 +66,27 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ img [ src "/logo.svg", onClick <| UpdateDot "digraph {a -> b}" ] []
-        , h1 [] [ text "Your Elm App is working!" ]
+    div
+        []
+        [ img
+            [ src "/logo.svg"
+            , onClick <| UpdateDot "digraph {a -> b}"
+            ]
+            []
+        , iframe
+            [ srcdoc model.svg
+            ]
+            []
         ]
+
+
+
+---- SUBSCRIPTION ----
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    updateSVG UpdateSVG
 
 
 
@@ -67,5 +99,5 @@ main =
         { view = view
         , init = \_ -> init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }

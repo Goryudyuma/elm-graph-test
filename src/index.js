@@ -17,7 +17,6 @@ hpccWasm.wasmFolder('https://unpkg.com/@hpcc-js/wasm/dist/');
 app.ports.dot.subscribe((data) => {
   console.log(data);
   hpccWasm.graphviz.layout(data, 'svg', 'dot').then((svg) => {
-    const div = document.getElementById('placeholder');
-    div.innerHTML = svg;
+    app.ports.updateSVG.send(svg);
   });
 });
