@@ -35,6 +35,7 @@ type alias Model =
     , lastInsertNodeID : Int
     , lastInsertEdgeID : Int
     , insertEdgeID : InsertEdgeIDType
+    , insertNodeLabel : String
     }
 
 
@@ -64,6 +65,7 @@ initialModel =
     , lastInsertNodeID = 0
     , lastInsertEdgeID = 0
     , insertEdgeID = { a = Nothing, b = Nothing, label = "" }
+    , insertNodeLabel = ""
     }
 
 
@@ -83,6 +85,7 @@ type Msg
     | UpdateInsertEdgeA String
     | UpdateInsertEdgeB String
     | UpdateInsertEdgeLabel String
+    | UpdateInsertNodeLabel String
     | InsertNode String
     | InsertEdge Int Int String
     | NoOp
@@ -137,6 +140,9 @@ update msg model =
             in
             ( { model | insertEdgeID = newInsertEdgeID }, Cmd.none )
 
+        UpdateInsertNodeLabel label ->
+            ( { model | insertNodeLabel = label }, Cmd.none )
+
         InsertNode label ->
             ( { model
                 | nowGraph =
@@ -158,7 +164,7 @@ update msg model =
                         (\contextMaybe ->
                             case contextMaybe of
                                 Just context ->
-                                    Just { context | incoming = IntDict.insert b label context.incoming }
+                                    Just { context | outgoing = IntDict.insert b label context.outgoing }
 
                                 Nothing ->
                                     Nothing
@@ -181,9 +187,10 @@ view : Model -> Html Msg
 view model =
     div
         []
-        [ img
+        [ input [ onInput UpdateInsertNodeLabel ] []
+        , img
             [ src "/logo.svg"
-            , onClick <| InsertNode "a"
+            , onClick <| InsertNode model.insertNodeLabel
             ]
             []
         , viewAddEdge model.nowGraph model.insertEdgeID
