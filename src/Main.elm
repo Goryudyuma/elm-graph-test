@@ -3,10 +3,12 @@ port module Main exposing (..)
 import Browser
 import Graph
 import Graph.DOT
-import Html exposing (Html, div, h1, iframe, img, text)
-import Html.Attributes exposing (sandbox, src, srcdoc, style)
-import Html.Events exposing (onClick)
+import Html exposing (Attribute, Html, button, div, h1, iframe, img, input, option, select, text)
+import Html.Attributes exposing (sandbox, src, srcdoc, style, value)
+import Html.Events exposing (on, onClick, onInput, targetValue)
+import Html.Events.Extra exposing (onChange)
 import IntDict exposing (IntDict)
+import Json.Decode as Json
 import Markdown exposing (defaultOptions)
 import Svg
 import Svg.Attributes
@@ -32,6 +34,7 @@ type alias Model =
     , nowGraph : GraphType
     , lastInsertNodeID : Int
     , lastInsertEdgeID : Int
+    , insertEdgeID : InsertEdgeIDType
     }
 
 
@@ -47,9 +50,21 @@ type alias EdgeType =
     String
 
 
+type alias InsertEdgeIDType =
+    { a : Maybe Int
+    , b : Maybe Int
+    , label : String
+    }
+
+
 initialModel : Model
 initialModel =
-    { svg = "", nowGraph = Graph.empty, lastInsertNodeID = 0, lastInsertEdgeID = 0 }
+    { svg = ""
+    , nowGraph = Graph.empty
+    , lastInsertNodeID = 0
+    , lastInsertEdgeID = 0
+    , insertEdgeID = { a = Nothing, b = Nothing, label = "" }
+    }
 
 
 init : ( Model, Cmd Msg )
@@ -65,7 +80,11 @@ type Msg
     = UpdateDot String
     | UpdateSVG String
     | UpdateGraph
+    | UpdateInsertEdgeA String
+    | UpdateInsertEdgeB String
+    | UpdateInsertEdgeLabel String
     | InsertNode String
+    | InsertEdge Int Int String
     | NoOp
 
 
@@ -77,6 +96,46 @@ update msg model =
 
         UpdateSVG svg ->
             ( { model | svg = svg }, Cmd.none )
+
+        UpdateGraph ->
+            ( model
+            , Task.perform
+                (\_ ->
+                    UpdateDot <|
+                        Graph.DOT.output Just Just model.nowGraph
+                )
+                (Task.succeed ())
+            )
+
+        UpdateInsertEdgeA a ->
+            let
+                oldInsertEdgeID =
+                    model.insertEdgeID
+
+                newInsertEdgeID =
+                    { oldInsertEdgeID | a = String.toInt a }
+            in
+            ( { model | insertEdgeID = newInsertEdgeID }, Cmd.none )
+
+        UpdateInsertEdgeB b ->
+            let
+                oldInsertEdgeID =
+                    model.insertEdgeID
+
+                newInsertEdgeID =
+                    { oldInsertEdgeID | b = String.toInt b }
+            in
+            ( { model | insertEdgeID = newInsertEdgeID }, Cmd.none )
+
+        UpdateInsertEdgeLabel label ->
+            let
+                oldInsertEdgeID =
+                    model.insertEdgeID
+
+                newInsertEdgeID =
+                    { oldInsertEdgeID | label = label }
+            in
+            ( { model | insertEdgeID = newInsertEdgeID }, Cmd.none )
 
         InsertNode label ->
             ( { model
@@ -92,14 +151,22 @@ update msg model =
             , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
             )
 
-        UpdateGraph ->
-            ( model
-            , Task.perform
-                (\_ ->
-                    UpdateDot <|
-                        Graph.DOT.output Just Just model.nowGraph
-                )
-                (Task.succeed ())
+        InsertEdge a b label ->
+            let
+                newGraph =
+                    Graph.update a
+                        (\contextMaybe ->
+                            case contextMaybe of
+                                Just context ->
+                                    Just { context | incoming = IntDict.insert b label context.incoming }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.nowGraph
+            in
+            ( { model | nowGraph = newGraph }
+            , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
             )
 
         NoOp ->
@@ -119,11 +186,36 @@ view model =
             , onClick <| InsertNode "a"
             ]
             []
+        , viewAddEdge model.nowGraph model.insertEdgeID
         , iframe
             [ style "width" "100%"
             , srcdoc model.svg
             ]
             []
+        ]
+
+
+viewAddEdge : GraphType -> InsertEdgeIDType -> Html Msg
+viewAddEdge graph insertEdgeID =
+    div []
+        [ select [ onChange UpdateInsertEdgeA ]
+            (Graph.nodes graph
+                |> List.map (\l -> option [ value <| String.fromInt l.id ] [ text l.label ])
+                |> List.append (List.singleton (option [ value "" ] [ text "" ]))
+            )
+        , text "->"
+        , select [ onChange UpdateInsertEdgeB ]
+            (Graph.nodes graph
+                |> List.map (\l -> option [ value <| String.fromInt l.id ] [ text l.label ])
+                |> List.append (List.singleton (option [ value "" ] [ text "" ]))
+            )
+        , input [ onInput UpdateInsertEdgeLabel ] []
+        , case ( insertEdgeID.a, insertEdgeID.b ) of
+            ( Just a, Just b ) ->
+                button [ onClick <| InsertEdge a b insertEdgeID.label ] [ text "add edge" ]
+
+            _ ->
+                div [] []
         ]
 
 
