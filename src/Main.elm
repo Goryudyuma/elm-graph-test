@@ -94,6 +94,7 @@ type Msg
     | InsertNode String
     | InsertEdge Int Int String
     | RemoveNode Int
+    | RemoveEdge Int Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -221,6 +222,24 @@ update msg model =
             , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
             )
 
+        RemoveEdge a b ->
+            let
+                newGraph =
+                    Graph.update a
+                        (\contextMaybe ->
+                            case contextMaybe of
+                                Just context ->
+                                    Just { context | outgoing = IntDict.remove b context.outgoing }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.nowGraph
+            in
+            ( { model | nowGraph = newGraph }
+            , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
+            )
+
 
 
 ---- VIEW ----
@@ -260,6 +279,12 @@ viewAddNode graph insertNodeCandidate =
         ]
 
 
+type AddDeleteOptionType
+    = AddOption
+    | DeleteOption
+    | OtherOption
+
+
 viewAddEdge : GraphType -> InsertEdgeType -> Html Msg
 viewAddEdge graph insertEdge =
     div []
@@ -270,7 +295,32 @@ viewAddEdge graph insertEdge =
         , case ( insertEdge.a, insertEdge.b ) of
             ( Just a, Just b ) ->
                 if a /= b then
-                    button [ onClick <| InsertEdge a b insertEdge.label ] [ text "add edge" ]
+                    let
+                        nodeMaybe =
+                            Graph.get a graph
+
+                        addOrDelete : AddDeleteOptionType
+                        addOrDelete =
+                            case nodeMaybe of
+                                Just node ->
+                                    if node.outgoing |> IntDict.member b then
+                                        DeleteOption
+
+                                    else
+                                        AddOption
+
+                                Nothing ->
+                                    OtherOption
+                    in
+                    case addOrDelete of
+                        AddOption ->
+                            button [ onClick <| InsertEdge a b insertEdge.label ] [ text "add edge" ]
+
+                        DeleteOption ->
+                            button [ onClick <| RemoveEdge a b ] [ text "delete edge" ]
+
+                        OtherOption ->
+                            div [] []
 
                 else
                     div [] []
