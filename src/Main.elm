@@ -3,7 +3,7 @@ port module Main exposing (..)
 import Browser
 import Graph
 import Graph.DOT
-import Html exposing (Attribute, Html, button, div, h1, iframe, img, input, option, select, text)
+import Html exposing (Attribute, Html, a, button, div, h1, iframe, img, input, option, select, text)
 import Html.Attributes exposing (sandbox, src, srcdoc, style, value)
 import Html.Events exposing (on, onClick, onInput, targetValue)
 import Html.Events.Extra exposing (onChange)
@@ -280,53 +280,51 @@ viewAddNode graph insertNodeCandidate =
 
 
 type AddDeleteOptionType
-    = AddOption
-    | DeleteOption
+    = AddOption Int Int
+    | DeleteOption Int Int
     | OtherOption
 
 
 viewAddEdge : GraphType -> InsertEdgeType -> Html Msg
 viewAddEdge graph insertEdge =
+    let
+        addOrDelete : AddDeleteOptionType
+        addOrDelete =
+            case ( insertEdge.a, insertEdge.b ) of
+                ( Just a, Just b ) ->
+                    case Graph.get a graph of
+                        Just node ->
+                            if node.outgoing |> IntDict.member b then
+                                DeleteOption a b
+
+                            else
+                                AddOption a b
+
+                        Nothing ->
+                            OtherOption
+
+                _ ->
+                    OtherOption
+    in
     div []
         [ viewAddEdgeSelectNode (Graph.nodes graph) UpdateInsertEdgeA
         , text "->"
         , viewAddEdgeSelectNode (Graph.nodes graph) UpdateInsertEdgeB
-        , input [ onInput UpdateInsertEdgeLabel ] []
-        , case ( insertEdge.a, insertEdge.b ) of
-            ( Just a, Just b ) ->
-                if a /= b then
-                    let
-                        nodeMaybe =
-                            Graph.get a graph
-
-                        addOrDelete : AddDeleteOptionType
-                        addOrDelete =
-                            case nodeMaybe of
-                                Just node ->
-                                    if node.outgoing |> IntDict.member b then
-                                        DeleteOption
-
-                                    else
-                                        AddOption
-
-                                Nothing ->
-                                    OtherOption
-                    in
-                    case addOrDelete of
-                        AddOption ->
-                            button [ onClick <| InsertEdge a b insertEdge.label ] [ text "add edge" ]
-
-                        DeleteOption ->
-                            button [ onClick <| RemoveEdge a b ] [ text "delete edge" ]
-
-                        OtherOption ->
-                            div [] []
-
-                else
-                    div [] []
+        , case addOrDelete of
+            AddOption _ _ ->
+                input [ onInput UpdateInsertEdgeLabel ] []
 
             _ ->
-                div [] []
+                a [] []
+        , case addOrDelete of
+            AddOption a b ->
+                button [ onClick <| InsertEdge a b insertEdge.label ] [ text "add edge" ]
+
+            DeleteOption a b ->
+                button [ onClick <| RemoveEdge a b ] [ text "delete edge" ]
+
+            OtherOption ->
+                a [] []
         ]
 
 
