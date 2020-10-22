@@ -40,10 +40,10 @@ type alias Model =
 
 
 type alias GraphType =
-    Graph.Graph String EdgeType
+    Graph.Graph NodeLabelType EdgeType
 
 
-type alias NodeType =
+type alias NodeLabelType =
     String
 
 
@@ -253,7 +253,7 @@ viewAddNode graph insertNodeCandidate =
           in
           case target of
             Just node ->
-                button [ onClick <| RemoveNode node.id ] [ text "remove node" ]
+                button [ onClick <| RemoveNode node.id ] [ text "delete node" ]
 
             Nothing ->
                 button [ onClick <| InsertNode insertNodeCandidate.label ] [ text "add node" ]
@@ -263,17 +263,9 @@ viewAddNode graph insertNodeCandidate =
 viewAddEdge : GraphType -> InsertEdgeType -> Html Msg
 viewAddEdge graph insertEdge =
     div []
-        [ select [ onChange UpdateInsertEdgeA ]
-            (Graph.nodes graph
-                |> List.map (\l -> option [ value <| String.fromInt l.id ] [ text l.label ])
-                |> List.append (List.singleton (option [ value "" ] [ text "" ]))
-            )
+        [ viewAddEdgeSelectNode (Graph.nodes graph) UpdateInsertEdgeA
         , text "->"
-        , select [ onChange UpdateInsertEdgeB ]
-            (Graph.nodes graph
-                |> List.map (\l -> option [ value <| String.fromInt l.id ] [ text l.label ])
-                |> List.append (List.singleton (option [ value "" ] [ text "" ]))
-            )
+        , viewAddEdgeSelectNode (Graph.nodes graph) UpdateInsertEdgeB
         , input [ onInput UpdateInsertEdgeLabel ] []
         , case ( insertEdge.a, insertEdge.b ) of
             ( Just a, Just b ) ->
@@ -286,6 +278,15 @@ viewAddEdge graph insertEdge =
             _ ->
                 div [] []
         ]
+
+
+viewAddEdgeSelectNode : List (Graph.Node NodeLabelType) -> (String -> Msg) -> Html Msg
+viewAddEdgeSelectNode nodes msg =
+    select [ onChange msg ]
+        (nodes
+            |> List.map (\l -> option [ value <| String.fromInt l.id ] [ text l.label ])
+            |> List.append (List.singleton (option [ value "" ] [ text "" ]))
+        )
 
 
 
