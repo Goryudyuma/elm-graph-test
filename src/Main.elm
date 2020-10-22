@@ -93,6 +93,7 @@ type Msg
     | UpdateInsertNodeLabel String
     | InsertNode String
     | InsertEdge Int Int String
+    | RemoveNode Int
     | NoOp
 
 
@@ -187,6 +188,11 @@ update msg model =
             , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
             )
 
+        RemoveNode nodeID ->
+            ( { model | nowGraph = Graph.remove nodeID model.nowGraph }
+            , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
+            )
+
         NoOp ->
             ( model, Cmd.none )
 
@@ -214,11 +220,18 @@ viewAddNode : GraphType -> InsertNodeType -> Html Msg
 viewAddNode graph insertNodeCandidate =
     div []
         [ input [ onInput UpdateInsertNodeLabel ] []
-        , if Graph.nodes graph |> List.all (\one -> one.label /= insertNodeCandidate.label) then
-            button [ onClick <| InsertNode insertNodeCandidate.label ] [ text "add node" ]
+        , let
+            target =
+                Graph.nodes graph
+                    |> List.filter (\one -> one.label == insertNodeCandidate.label)
+                    |> List.head
+          in
+          case target of
+            Just node ->
+                button [ onClick <| RemoveNode node.id ] [ text "remove node" ]
 
-          else
-            div [] []
+            Nothing ->
+                button [ onClick <| InsertNode insertNodeCandidate.label ] [ text "add node" ]
         ]
 
 
