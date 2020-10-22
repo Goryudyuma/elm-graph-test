@@ -94,7 +94,6 @@ type Msg
     | InsertNode String
     | InsertEdge Int Int String
     | RemoveNode Int
-    | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -221,9 +220,6 @@ update msg model =
             ( { model | nowGraph = Graph.remove nodeID model.nowGraph, insertEdgeCandidate = newInsertEdgeCandidate }
             , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
             )
-
-        NoOp ->
-            ( model, Cmd.none )
 
 
 
