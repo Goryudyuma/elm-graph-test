@@ -34,8 +34,8 @@ type alias Model =
     , nowGraph : GraphType
     , lastInsertNodeID : Int
     , lastInsertEdgeID : Int
-    , insertEdgeID : InsertEdgeIDType
-    , insertNodeLabel : String
+    , insertEdgeCandidate : InsertEdgeIDType
+    , insertNodeCandidate : InsertNodeType
     }
 
 
@@ -58,14 +58,19 @@ type alias InsertEdgeIDType =
     }
 
 
+type alias InsertNodeType =
+    { label : String
+    }
+
+
 initialModel : Model
 initialModel =
     { svg = ""
     , nowGraph = Graph.empty
     , lastInsertNodeID = 0
     , lastInsertEdgeID = 0
-    , insertEdgeID = { a = Nothing, b = Nothing, label = "" }
-    , insertNodeLabel = ""
+    , insertEdgeCandidate = { a = Nothing, b = Nothing, label = "" }
+    , insertNodeCandidate = { label = "" }
     }
 
 
@@ -112,36 +117,43 @@ update msg model =
 
         UpdateInsertEdgeA a ->
             let
-                oldInsertEdgeID =
-                    model.insertEdgeID
+                oldInsertEdgeCandidate =
+                    model.insertEdgeCandidate
 
-                newInsertEdgeID =
-                    { oldInsertEdgeID | a = String.toInt a }
+                newInsertEdgeCandidate =
+                    { oldInsertEdgeCandidate | a = String.toInt a }
             in
-            ( { model | insertEdgeID = newInsertEdgeID }, Cmd.none )
+            ( { model | insertEdgeCandidate = newInsertEdgeCandidate }, Cmd.none )
 
         UpdateInsertEdgeB b ->
             let
-                oldInsertEdgeID =
-                    model.insertEdgeID
+                oldInsertEdgeCandidate =
+                    model.insertEdgeCandidate
 
-                newInsertEdgeID =
-                    { oldInsertEdgeID | b = String.toInt b }
+                newInsertEdgeCandidate =
+                    { oldInsertEdgeCandidate | b = String.toInt b }
             in
-            ( { model | insertEdgeID = newInsertEdgeID }, Cmd.none )
+            ( { model | insertEdgeCandidate = newInsertEdgeCandidate }, Cmd.none )
 
         UpdateInsertEdgeLabel label ->
             let
-                oldInsertEdgeID =
-                    model.insertEdgeID
+                oldInsertEdgeCandidate =
+                    model.insertEdgeCandidate
 
-                newInsertEdgeID =
-                    { oldInsertEdgeID | label = label }
+                newInsertEdgeCandidate =
+                    { oldInsertEdgeCandidate | label = label }
             in
-            ( { model | insertEdgeID = newInsertEdgeID }, Cmd.none )
+            ( { model | insertEdgeCandidate = newInsertEdgeCandidate }, Cmd.none )
 
         UpdateInsertNodeLabel label ->
-            ( { model | insertNodeLabel = label }, Cmd.none )
+            let
+                oldInsertNodeCandidate =
+                    model.insertNodeCandidate
+
+                newInsertNodeCandidate =
+                    { oldInsertNodeCandidate | label = label }
+            in
+            ( { model | insertNodeCandidate = newInsertNodeCandidate }, Cmd.none )
 
         InsertNode label ->
             ( { model
@@ -187,18 +199,26 @@ view : Model -> Html Msg
 view model =
     div
         []
-        [ input [ onInput UpdateInsertNodeLabel ] []
-        , img
-            [ src "/logo.svg"
-            , onClick <| InsertNode model.insertNodeLabel
-            ]
-            []
-        , viewAddEdge model.nowGraph model.insertEdgeID
+        [ viewAddNode model.nowGraph model.insertNodeCandidate
+        , viewAddEdge model.nowGraph model.insertEdgeCandidate
         , iframe
             [ style "width" "100%"
+            , style "height" "100vh"
             , srcdoc model.svg
             ]
             []
+        ]
+
+
+viewAddNode : GraphType -> InsertNodeType -> Html Msg
+viewAddNode graph insertNodeCandidate =
+    div []
+        [ input [ onInput UpdateInsertNodeLabel ] []
+        , if Graph.nodes graph |> List.all (\one -> one.label /= insertNodeCandidate.label) then
+            button [ onClick <| InsertNode insertNodeCandidate.label ] [ text "add node" ]
+
+          else
+            div [] []
         ]
 
 
