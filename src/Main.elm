@@ -34,7 +34,7 @@ type alias Model =
     , nowGraph : GraphType
     , lastInsertNodeID : Int
     , lastInsertEdgeID : Int
-    , insertEdgeCandidate : InsertEdgeIDType
+    , insertEdgeCandidate : InsertEdgeType
     , insertNodeCandidate : InsertNodeType
     }
 
@@ -51,7 +51,7 @@ type alias EdgeType =
     String
 
 
-type alias InsertEdgeIDType =
+type alias InsertEdgeType =
     { a : Maybe Int
     , b : Maybe Int
     , label : String
@@ -222,8 +222,8 @@ viewAddNode graph insertNodeCandidate =
         ]
 
 
-viewAddEdge : GraphType -> InsertEdgeIDType -> Html Msg
-viewAddEdge graph insertEdgeID =
+viewAddEdge : GraphType -> InsertEdgeType -> Html Msg
+viewAddEdge graph insertEdge =
     div []
         [ select [ onChange UpdateInsertEdgeA ]
             (Graph.nodes graph
@@ -237,9 +237,9 @@ viewAddEdge graph insertEdgeID =
                 |> List.append (List.singleton (option [ value "" ] [ text "" ]))
             )
         , input [ onInput UpdateInsertEdgeLabel ] []
-        , case ( insertEdgeID.a, insertEdgeID.b ) of
+        , case ( insertEdge.a, insertEdge.b ) of
             ( Just a, Just b ) ->
-                button [ onClick <| InsertEdge a b insertEdgeID.label ] [ text "add edge" ]
+                button [ onClick <| InsertEdge a b insertEdge.label ] [ text "add edge" ]
 
             _ ->
                 div [] []
