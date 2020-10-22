@@ -189,7 +189,36 @@ update msg model =
             )
 
         RemoveNode nodeID ->
-            ( { model | nowGraph = Graph.remove nodeID model.nowGraph }
+            let
+                oldInsertEdgeCandidate =
+                    model.insertEdgeCandidate
+
+                newA =
+                    oldInsertEdgeCandidate.a
+                        |> Maybe.andThen
+                            (\a ->
+                                if a == nodeID then
+                                    Nothing
+
+                                else
+                                    Just a
+                            )
+
+                newB =
+                    oldInsertEdgeCandidate.b
+                        |> Maybe.andThen
+                            (\b ->
+                                if b == nodeID then
+                                    Nothing
+
+                                else
+                                    Just b
+                            )
+
+                newInsertEdgeCandidate =
+                    { oldInsertEdgeCandidate | a = newA, b = newB }
+            in
+            ( { model | nowGraph = Graph.remove nodeID model.nowGraph, insertEdgeCandidate = newInsertEdgeCandidate }
             , Task.perform (\_ -> UpdateGraph) (Task.succeed ())
             )
 
@@ -252,7 +281,11 @@ viewAddEdge graph insertEdge =
         , input [ onInput UpdateInsertEdgeLabel ] []
         , case ( insertEdge.a, insertEdge.b ) of
             ( Just a, Just b ) ->
-                button [ onClick <| InsertEdge a b insertEdge.label ] [ text "add edge" ]
+                if a /= b then
+                    button [ onClick <| InsertEdge a b insertEdge.label ] [ text "add edge" ]
+
+                else
+                    div [] []
 
             _ ->
                 div [] []
